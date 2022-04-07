@@ -1,115 +1,103 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:yimages/core/_utils/logger.dart';
+import 'package:yimages/commands/app/bootstrap_command.dart';
+import 'package:yimages/data/models/app_model.dart';
+import 'package:yimages/data/models/books_model.dart';
+import 'package:yimages/data/services/cloudinary/cloud_storage_service.dart';
+import 'package:yimages/data/services/firebase/firebase_service.dart';
+import 'package:yimages/presentations/routing/app_route_parser.dart';
+import 'package:yimages/presentations/routing/app_router.dart';
+import 'package:yimages/themes.dart';
+import 'package:provider/provider.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  // Call a method to setup a global error handler so we can log all errors, including ones from native extensions.
+  initLogger(() async {
+    // Status bar style on Android/iOS
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle());
+
+    if (kIsWeb) {
+      // Increase Skia cache size to support bigger images.
+      const int megabyte = 1000000;
+      SystemChannels.skia
+          .invokeMethod('Skia.setResourceCacheMaxBytes', 512 * megabyte);
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    /// Create core models & services
+    FirebaseService firebase = FirebaseFactory.create();
+    BooksModel booksModel = BooksModel();
+    AppModel appModel = AppModel(booksModel, firebase);
+
+    // /// Run
+    runApp(MultiProvider(
+      providers: [
+        // Firebase
+        Provider.value(value: firebase),
+        // Cloudinary
+        Provider(create: (_) => CloudStorageService()),
+        // App Model - Stores data related to global settings or app modes
+        ChangeNotifierProvider.value(value: appModel),
+        // BooksModel - Stores data about the content in the app
+        ChangeNotifierProvider.value(value: booksModel),
+      ],
+
+      //child: BasicRouterSpike(),
+      child: const AppBootstrapper(),
+    ));
+  });
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+// Bootstrap the app, initializing all Controllers and Services
+class AppBootstrapper extends StatefulWidget {
+  const AppBootstrapper({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+  _AppBootstrapperState createState() => _AppBootstrapperState();
+}
+
+class _AppBootstrapperState extends State<AppBootstrapper> {
+  AppRouteParser routeParser = AppRouteParser();
+  late AppRouterDelegate router;
+  @override
+  void initState() {
+    // Create the appRouter, and inject it with the models/services it needs
+    router = AppRouterDelegate(
+      context.read<AppModel>(),
+      context.read<BooksModel>(),
+      context.read<FirebaseService>(),
     );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+    // Run Bootstrap with scheduleMicrotask to avoid triggering any builds from init(), which would throw an error.
+    scheduleMicrotask(() {
+      // Bootstrap. This will initialize services, load saved data, determine initial navigation state and anything else that needs to get done at startup
+      BootstrapCommand().run(context);
     });
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    // Get the current AppTheme so we can generate a ThemeData for the MaterialApp
+    AppTheme theme = context.select((AppModel m) => m.theme);
+    // Generate ThemeData from our own custom AppTheme object
+    ThemeData materialTheme = theme.toThemeData();
+    // Determine the density we want, based on AppModel.enableTouchMode
+    bool enableTouchMode = context.select((AppModel m) => m.enableTouchMode);
+    double density = enableTouchMode ? 0 : -1;
+    print("enableTouchMode: $enableTouchMode");
+    // Inject desired density into MaterialTheme for free animation when values change
+    materialTheme = ThemeData(
+        visualDensity: VisualDensity(horizontal: density, vertical: density));
+    return MaterialApp.router(
+      title: "Flutter Folio",
+      debugShowCheckedModeBanner: false,
+      theme: materialTheme,
+      routeInformationParser: routeParser,
+      routerDelegate: router,
     );
   }
 }
