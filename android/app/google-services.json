@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "183196894352",
+    "project_id": "yimages",
+    "storage_bucket": "yimages.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:183196894352:android:61442a8de825ec3f080415",
+        "android_client_info": {
+          "package_name": "net.themeplace.yimages"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "183196894352-sqt0d5mujj1cfa79tsmuvs6dhq32r8cg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAcaUnBWKHRVOtXXNNpVQ3MPCXEvY9ZKZ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "183196894352-sqt0d5mujj1cfa79tsmuvs6dhq32r8cg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "183196894352-bnvp0mdcsoekal7tkg896f7hl1jtnv19.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.themeplace.yimages"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
